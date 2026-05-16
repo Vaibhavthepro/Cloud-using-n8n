@@ -1,0 +1,10 @@
+# 🛡️ GitHub Protection
+.env
+data/database.sqlite
+data/tasks_completed_report.xlsx
+data/*.xlsx
+**/__pycache__/
+*.pyc
+.n8n/
+node_modules/
+.DS_Store

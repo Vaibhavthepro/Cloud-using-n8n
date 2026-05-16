@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  n8n:
+    build: .
+    container_name: n8n_automation
+    restart: always
+    ports:
+      - "5679:5678"
+    environment:
+      - N8N_BLOCK_NODES=
+      - N8N_BLOCK_ENV_ACCESS_IN_JS=false
+      - N8N_METRICS=true
+      - TZ=Asia/Kolkata
+      - PROJECT_ROOT=${PROJECT_ROOT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - NOTIFY_EMAIL=${NOTIFY_EMAIL}
+      - HOST_MACHINE_NAME=${HOST_MACHINE_NAME}
+    volumes:
+      - .:/home/node/excel-flow
+      - n8n_data:/home/node/.n8n
+
+  dashboard:
+    image: python:3.10-slim
+    container_name: monitoring_dashboard
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - TZ=Asia/Kolkata
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: /bin/sh -c "pip install fastapi uvicorn jinja2 && python3 dashboard/main.py"
+
+volumes:
+  n8n_data:

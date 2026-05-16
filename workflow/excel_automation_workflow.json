@@ -1,0 +1,290 @@
+{
+  "name": "Cross-Platform Excel Automation System (FINAL BUG FIX)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "c6a1b1a1-1b1a-1b1a-1b1a-1b1a1b1a1b1a",
+      "name": "Schedule Trigger (Stable)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/home/node/excel-flow/data/tasks.xlsx"
+      },
+      "id": "d7b2b2b2-2b2a-2b2a-2b2a-2b2a2b2a2b2a",
+      "name": "Read Excel File",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "e8c3c3c3-3c3a-3c3a-3c3a-3c3a3c3a3c3a",
+      "name": "Parse Excel",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.filter(item => {\n  return item.json.Status === 'Pending';\n});"
+      },
+      "id": "f9d4d4d4-4d4a-4d4a-4d4a-4d4a4d4a4d4a",
+      "name": "Filter Pending Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "a0e5e5e5-5e5a-5e5a-5e5a-5e5a5e5a5e5a",
+      "name": "Process Tasks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=python /home/node/excel-flow/{{ $json['Script Path'] }}"
+      },
+      "id": "b1f6f6f6-6f6a-6f6a-6f6a-6f6a6f6a6f6a",
+      "name": "Execute Python Script",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "command": "python /home/node/excel-flow/scripts/get_machine_info.py"
+      },
+      "id": "detect-machine-id",
+      "name": "Detect Machine Type",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const startTime = new Date().toISOString();\nconst task = $('Process Tasks').item.json;\nconst result = $('Execute Python Script').item.json;\nconst machine = $('Detect Machine Type').item.json.stdout.trim();\n\nreturn {\n  task_id: task['Task ID'],\n  task_name: task['Task Name'],\n  start_time: startTime,\n  end_time: new Date().toISOString(),\n  status: result.exitCode === 0 ? 'SUCCESS' : 'FAILED',\n  stdout: (result.stdout || '').replace(/['\"]/g, ''),\n  stderr: (result.stderr || '').replace(/['\"]/g, ''),\n  duration: (new Date() - new Date(startTime)) / 1000,\n  machine_name: machine\n};"
+      },
+      "id": "c2a7a7a7-7a7a-7a7a-7a7a-7a7a7a7a7a7a",
+      "name": "Prepare Log Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=python /home/node/excel-flow/scripts/save_log.py \"{{ $json.task_id }}\" \"{{ $json.task_name }}\" \"{{ $json.start_time }}\" \"{{ $json.end_time }}\" \"{{ $json.status }}\" \"{{ $json.stdout }}\" \"{{ $json.stderr }}\" \"{{ $json.duration }}\" \"{{ $json.machine_name }}\""
+      },
+      "id": "save-log-python-id",
+      "name": "Save Log to DB (Python)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=python /home/node/excel-flow/scripts/send_email.py '{{ JSON.stringify($json) }}'"
+      },
+      "id": "send-email-python-id",
+      "name": "Send Email (Python)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=python /home/node/excel-flow/scripts/update_excel.py \"{{ $('Prepare Log Data').item.json.task_id }}\""
+      },
+      "id": "update-excel-python-id",
+      "name": "Update Excel Status (Python)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "loop-back-node",
+      "name": "Wait for Loop",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (Stable)": {
+      "main": [
+        [
+          {
+            "node": "Read Excel File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Excel File": {
+      "main": [
+        [
+          {
+            "node": "Parse Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Excel": {
+      "main": [
+        [
+          {
+            "node": "Filter Pending Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Pending Tasks": {
+      "main": [
+        [
+          {
+            "node": "Process Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Tasks": {
+      "main": [
+        [
+          {
+            "node": "Execute Python Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Python Script": {
+      "main": [
+        [
+          {
+            "node": "Detect Machine Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Machine Type": {
+      "main": [
+        [
+          {
+            "node": "Prepare Log Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Log Data": {
+      "main": [
+        [
+          {
+            "node": "Save Log to DB (Python)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Email (Python)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update Excel Status (Python)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Excel Status (Python)": {
+      "main": [
+        [
+          {
+            "node": "Wait for Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Loop": {
+      "main": [
+        [
+          {
+            "node": "Process Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automation Command Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050505;
+            --terminal-bg: #0d0d0d;
+            --primary-green: #00ff41;
+            --dim-green: #008f11;
+            --error-red: #ff3e3e;
+            --text-gray: #888;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--primary-green);
+            font-family: 'Fira Code', monospace;
+            margin: 0;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--dim-green);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .terminal-window {
+            background: var(--terminal-bg);
+            border: 1px solid var(--dim-green);
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .terminal-header {
+            background: #1a1a1a;
+            padding: 5px 15px;
+            font-size: 0.75rem;
+            color: var(--text-gray);
+            border-bottom: 1px solid #222;
+        }
+
+        .terminal-content {
+            padding: 20px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .command-line {
+            margin-bottom: 15px;
+            display: flex;
+        }
+
+        .prompt { color: var(--primary-green); margin-right: 10px; }
+        .command-text { color: #fff; }
+
+        .typewriter {
+            overflow: hidden;
+            border-right: .15em solid var(--primary-green);
+            white-space: nowrap;
+            margin: 0 auto;
+            letter-spacing: .15em;
+            animation: typing 2s steps(40, end), blink-caret .75s step-end infinite;
+        }
+
+        @keyframes typing { from { width: 0 } to { width: 100% } }
+        @keyframes blink-caret { from, to { border-color: transparent } 50% { border-color: var(--primary-green); } }
+
+        .loading-bar {
+            width: 0%;
+            height: 2px;
+            background: var(--primary-green);
+            margin: 10px 0;
+            transition: width 1.5s ease-in-out;
+        }
+
+        .log-entry {
+            margin-bottom: 15px;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeIn 0.5s forwards;
+        }
+
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+        .status-tag {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        .success-tag { background: rgba(0, 255, 65, 0.2); color: var(--primary-green); border: 1px solid var(--primary-green); }
+        .fail-tag { background: rgba(255, 62, 62, 0.2); color: var(--error-red); border: 1px solid var(--error-red); }
+
+        .output {
+            color: #ccc;
+            font-size: 0.9rem;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            margin-top: 5px;
+            border-left: 2px solid var(--dim-green);
+        }
+
+        .stats-overlay {
+            position: absolute;
+            top: 40px;
+            right: 20px;
+            text-align: right;
+            font-size: 0.8rem;
+            color: var(--dim-green);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>SYSTEM STATUS: <span id="pulse" style="color: var(--primary-green)">● RUNNING</span></div>
+        <div id="clock"></div>
+    </div>
+
+    <div class="terminal-window">
+        <div class="terminal-header">
+            VAIBHAV-AUTOMATION-CORE v2.5
+        </div>
+        <div class="terminal-content" id="terminal-body">
+            <div class="command-line">
+                <span class="prompt">root@automation:~#</span>
+                <span class="command-text typewriter" id="main-cmd">python process_excel_tasks.py --live</span>
+            </div>
+            
+            <div id="loading" class="loading-bar"></div>
+            
+            <div id="logs-container">
+                {% for log in logs %}
+                <div class="log-entry" style="animation-delay: {{ loop.index0 * 0.2 }}s">
+                    <div>
+                        <span style="color: var(--text-gray)">[{{ log.end_time }}]</span>
+                        <span style="color: #00d4ff">[{{ log.task_id }}]</span>
+                        <span class="status-tag {% if log.status == 'SUCCESS' %}success-tag{% else %}fail-tag{% endif %}">
+                            {{ log.status }}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.8rem; margin: 5px 0;">EXECUTION_TARGET: {{ log.machine_name }}</div>
+                    <div class="output">{{ log.stdout }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="stats-overlay">
+            TOTAL_TASKS: {{ total }}<br>
+            SUCCESS_RATE: {{ (success / total * 100)|round(1) if total > 0 else 0 }}%
+        </div>
+    </div>
+
+    <script>
+        // Set loading bar
+        setTimeout(() => { document.getElementById('loading').style.width = '100%'; }, 500);
+
+        // Update clock
+        function updateClock() {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Auto refresh
+        setTimeout(() => { window.location.reload(); }, 15000);
+    </script>
+</body>
+</html>

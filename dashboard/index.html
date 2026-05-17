@@ -3,177 +3,1535 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Automation Command Center</title>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet">
+    <title>UEAAS Dashboard - Autonomous Automation Center</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Fira+Code:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #050505;
-            --terminal-bg: #0d0d0d;
+            --bg-dark: #03060f;
+            --bg-card: rgba(8, 16, 32, 0.65);
+            --border-glow: rgba(0, 255, 65, 0.18);
             --primary-green: #00ff41;
+            --secondary-cyan: #00e5ff;
             --dim-green: #008f11;
-            --error-red: #ff3e3e;
-            --text-gray: #888;
+            --error-red: #ff3344;
+            --text-gold: #00ff41;
+            --text-silver: #a0aec0;
+            --text-light: #f7fafc;
+            --font-ui: 'Outfit', sans-serif;
+            --font-mono: 'Fira Code', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--dim-green) rgba(0, 0, 0, 0.3);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--dim-green);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-green);
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--primary-green);
-            font-family: 'Fira Code', monospace;
-            margin: 0;
-            padding: 20px;
-            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: var(--font-ui);
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: relative;
+            min-height: 100vh;
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 1px solid var(--dim-green);
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+        /* Matrix Canvas Background */
+        #binary-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            opacity: 0.12;
+            pointer-events: none;
         }
 
-        .terminal-window {
-            background: var(--terminal-bg);
-            border: 1px solid var(--dim-green);
-            height: 85vh;
+        /* Main Layout */
+        .app-container {
             display: flex;
-            flex-direction: column;
+            min-height: 100vh;
+            z-index: 1;
             position: relative;
         }
 
-        .terminal-header {
-            background: #1a1a1a;
-            padding: 5px 15px;
-            font-size: 0.75rem;
-            color: var(--text-gray);
-            border-bottom: 1px solid #222;
+        /* Left Navigation Sidebar */
+        .sidebar {
+            width: 80px;
+            background: rgba(3, 7, 18, 0.85);
+            backdrop-filter: blur(15px);
+            border-right: 1px solid var(--border-glow);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 0;
+            justify-content: space-between;
+            z-index: 10;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
         }
 
-        .terminal-content {
-            padding: 20px;
-            overflow-y: auto;
+        .sidebar-brand {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #107c41, #1f9a55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(16, 124, 65, 0.4);
+            font-weight: 800;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-brand:hover {
+            transform: scale(1.05) rotate(5deg);
+            box-shadow: 0 0 25px rgba(0, 255, 65, 0.8);
+        }
+
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            margin-top: -50px;
+        }
+
+        .menu-item {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-silver);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .menu-item:hover, .menu-item.active {
+            color: var(--primary-green);
+            background: rgba(0, 255, 65, 0.05);
+            border-color: rgba(0, 255, 65, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .menu-item.active::before {
+            content: '';
+            position: absolute;
+            left: -4px;
+            top: 14px;
+            width: 4px;
+            height: 20px;
+            background: var(--primary-green);
+            border-radius: 0 4px 4px 0;
+            box-shadow: 0 0 10px var(--primary-green);
+        }
+
+        .sidebar-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Main Workspace Content */
+        .workspace {
             flex-grow: 1;
+            margin-left: 80px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            max-width: 1800px;
+            width: calc(100% - 80px);
         }
 
-        .command-line {
-            margin-bottom: 15px;
+        /* Top Header Navigation */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 5;
+        }
+
+        .header-title-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .header-subtitle {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--primary-green);
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+            font-weight: 600;
+        }
+
+        .header-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text-light);
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .dropdown-select {
+            background: rgba(8, 16, 32, 0.85);
+            border: 1px solid var(--border-glow);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: var(--text-light);
+            font-family: var(--font-ui);
+            font-size: 0.9rem;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .dropdown-select:hover {
+            border-color: var(--primary-green);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        .system-time {
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            color: var(--secondary-cyan);
+            background: rgba(0, 229, 255, 0.05);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+        }
+
+        /* Dynamic Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            align-items: stretch;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Glassmorphic Panel/Card Base */
+        .glass-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 255, 65, 0.03);
+            transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(0, 255, 65, 0.35);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 255, 65, 0.08);
+        }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            padding-bottom: 10px;
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            color: var(--primary-green);
+            text-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-dots {
+            color: var(--text-silver);
+            cursor: pointer;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+
+        /* CENTRAL HERO PANEL WITH 3D ORBIT */
+        .hero-panel {
+            grid-column: span 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 480px;
+            padding: 40px;
+            gap: 40px;
+            background: radial-gradient(circle at 75% 50%, rgba(0, 255, 65, 0.07) 0%, rgba(3, 7, 18, 0) 65%), var(--bg-card);
+        }
+
+        @media (max-width: 900px) {
+            .hero-panel {
+                grid-column: span 1;
+                flex-direction: column-reverse;
+                text-align: center;
+                min-height: auto;
+            }
+            .hero-right {
+                height: 250px;
+            }
+        }
+
+        .hero-left {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .hero-system-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 255, 65, 0.06);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            color: var(--primary-green);
+            padding: 6px 14px;
+            border-radius: 50px;
+            width: fit-content;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            animation: pulse-border 2s infinite alternate;
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 5px rgba(0, 255, 65, 0.2); }
+            100% { box-shadow: 0 0 15px rgba(0, 255, 65, 0.5); }
+        }
+
+        .hero-status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--primary-green);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px var(--primary-green);
+            animation: blink 1.2s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.2; }
+        }
+
+        .hero-title {
+            font-size: 2.3rem;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #ffffff 40%, var(--primary-green) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 15px 30px rgba(0, 255, 65, 0.05);
+        }
+
+        .hero-desc {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-silver);
+            max-width: 600px;
+        }
+
+        .hero-btn {
+            background: linear-gradient(135deg, rgba(0, 255, 65, 0.2) 0%, rgba(0, 229, 255, 0.15) 100%);
+            border: 1px solid var(--primary-green);
+            color: var(--primary-green);
+            padding: 14px 32px;
+            border-radius: 50px;
+            font-family: var(--font-ui);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            width: fit-content;
+            margin-top: 10px;
+            box-shadow: 0 4px 20px rgba(0, 255, 65, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hero-btn:hover {
+            color: #ffffff;
+            border-color: #ffffff;
+            background: var(--primary-green);
+            box-shadow: 0 0 30px var(--primary-green), 0 0 10px rgba(0, 255, 65, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* 3D HOLOGRAPHIC SPINNING ORBIT SYSTEM */
+        .hero-right {
+            flex: 0.8;
+            height: 380px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            perspective: 1000px;
+        }
+
+        .hologram-stage {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            transform-style: preserve-3d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Central Excel 3D Logo */
+        .excel-hologram-logo {
+            position: absolute;
+            width: 110px;
+            height: 110px;
+            background: rgba(16, 124, 65, 0.2);
+            border: 2px solid var(--primary-green);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 45px rgba(0, 255, 65, 0.4), inset 0 0 20px rgba(0, 255, 65, 0.2);
+            backdrop-filter: blur(10px);
+            z-index: 5;
+            transform: rotateY(15deg) rotateX(10deg);
+            animation: floatLogo 4s ease-in-out infinite;
+            transform-style: preserve-3d;
+        }
+
+        .excel-hologram-logo::before {
+            content: "X";
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0 0 15px var(--primary-green), 0 0 30px var(--primary-green);
+            font-family: var(--font-ui);
+            transform: translateZ(15px);
+        }
+
+        /* Secondary glowing layout marks inside X */
+        .excel-hologram-logo::after {
+            content: "";
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 20px;
+            height: 20px;
+            border-top: 2px solid var(--primary-green);
+            border-right: 2px solid var(--primary-green);
+            opacity: 0.8;
+            transform: translateZ(8px);
+        }
+
+        @keyframes floatLogo {
+            0%, 100% { transform: translateY(0px) rotateY(15deg) rotateX(10deg); }
+            50% { transform: translateY(-15px) rotateY(25deg) rotateX(5deg); }
+        }
+
+        /* Holographic Orbital Rings */
+        .orbit-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px dashed rgba(0, 255, 65, 0.35);
+            transform-style: preserve-3d;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
+        }
+
+        .orbit-ring-1 {
+            width: 180px;
+            height: 180px;
+            transform: rotateX(70deg) rotateY(15deg) rotateZ(0deg);
+            animation: spinRingClockwise 12s linear infinite;
+            border: 1.5px solid rgba(0, 255, 65, 0.5);
+            border-top: 1.5px solid transparent;
+            border-bottom: 1.5px solid transparent;
+        }
+
+        .orbit-ring-2 {
+            width: 230px;
+            height: 230px;
+            transform: rotateX(60deg) rotateY(-20deg) rotateZ(0deg);
+            animation: spinRingCounterClockwise 18s linear infinite;
+            border: 1px dashed rgba(0, 229, 255, 0.6);
+        }
+
+        .orbit-ring-3 {
+            width: 270px;
+            height: 270px;
+            transform: rotateX(80deg) rotateY(5deg) rotateZ(0deg);
+            animation: spinRingClockwise 25s linear infinite;
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            border-left: 1px solid transparent;
+            border-right: 1px solid transparent;
+        }
+
+        @keyframes spinRingClockwise {
+            from { transform: rotateX(70deg) rotateY(15deg) rotateZ(0deg); }
+            to { transform: rotateX(70deg) rotateY(15deg) rotateZ(360deg); }
+        }
+
+        @keyframes spinRingCounterClockwise {
+            from { transform: rotateX(60deg) rotateY(-20deg) rotateZ(360deg); }
+            to { transform: rotateX(60deg) rotateY(-20deg) rotateZ(0deg); }
+        }
+
+        /* Particle Trails orbiting */
+        .orbit-particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: var(--primary-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--primary-green), 0 0 20px var(--primary-green);
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .orbit-particle-cyan {
+            background: var(--secondary-cyan);
+            box-shadow: 0 0 10px var(--secondary-cyan), 0 0 20px var(--secondary-cyan);
+        }
+
+        /* Holographic Grid Pedestal */
+        .hologram-grid-floor {
+            position: absolute;
+            width: 280px;
+            height: 80px;
+            background: radial-gradient(ellipse at center, rgba(0, 255, 65, 0.15) 0%, transparent 70%);
+            bottom: -20px;
+            transform: rotateX(85deg);
+            border-radius: 50%;
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* LEFT COLUMN CARD: SCRIPTS EDITOR */
+        .scripts-panel {
+            display: flex;
+            flex-direction: column;
+            min-height: 480px;
+        }
+
+        .tabs-header {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-silver);
+            font-family: var(--font-ui);
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 6px 16px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary-green);
+        }
+
+        .tab-btn.active {
+            color: var(--primary-green);
+            background: rgba(0, 255, 65, 0.06);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
+        }
+
+        .code-editor-container {
+            flex-grow: 1;
+            background: rgba(3, 7, 18, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 16px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            line-height: 1.5;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.8);
             display: flex;
         }
 
-        .prompt { color: var(--primary-green); margin-right: 10px; }
-        .command-text { color: #fff; }
-
-        .typewriter {
-            overflow: hidden;
-            border-right: .15em solid var(--primary-green);
-            white-space: nowrap;
-            margin: 0 auto;
-            letter-spacing: .15em;
-            animation: typing 2s steps(40, end), blink-caret .75s step-end infinite;
-        }
-
-        @keyframes typing { from { width: 0 } to { width: 100% } }
-        @keyframes blink-caret { from, to { border-color: transparent } 50% { border-color: var(--primary-green); } }
-
-        .loading-bar {
-            width: 0%;
-            height: 2px;
-            background: var(--primary-green);
-            margin: 10px 0;
-            transition: width 1.5s ease-in-out;
-        }
-
-        .log-entry {
-            margin-bottom: 15px;
-            opacity: 0;
-            transform: translateY(10px);
-            animation: fadeIn 0.5s forwards;
-        }
-
-        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
-
-        .status-tag {
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 0.8rem;
-            margin-left: 10px;
-        }
-        .success-tag { background: rgba(0, 255, 65, 0.2); color: var(--primary-green); border: 1px solid var(--primary-green); }
-        .fail-tag { background: rgba(255, 62, 62, 0.2); color: var(--error-red); border: 1px solid var(--error-red); }
-
-        .output {
-            color: #ccc;
-            font-size: 0.9rem;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.03);
-            margin-top: 5px;
-            border-left: 2px solid var(--dim-green);
-        }
-
-        .stats-overlay {
-            position: absolute;
-            top: 40px;
-            right: 20px;
+        .code-gutter {
+            color: rgba(255, 255, 255, 0.15);
             text-align: right;
+            padding-right: 12px;
+            border-right: 1px solid rgba(255, 255, 255, 0.04);
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .code-lines {
+            padding-left: 16px;
+            color: #d1d5db;
+            flex-grow: 1;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .code-keyword { color: #f472b6; font-weight: 600; }
+        .code-func { color: #60a5fa; }
+        .code-string { color: #34d399; }
+        .code-comment { color: #6b7280; font-style: italic; }
+        .code-num { color: #fbbf24; }
+
+        /* RIGHT COLUMN GRID WIDGETS */
+        .metrics-subgrid {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        /* Card with Metrics and Progress bar */
+        .metrics-card-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            align-items: center;
+        }
+
+        .metric-stat-box {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            position: relative;
+        }
+
+        .metric-stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-silver);
+            margin-bottom: 8px;
+        }
+
+        .metric-stat-val {
+            font-family: var(--font-mono);
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary-green);
+            text-shadow: 0 0 15px rgba(0, 255, 65, 0.45);
+        }
+
+        .metric-stat-box-cyan .metric-stat-val {
+            color: var(--secondary-cyan);
+            text-shadow: 0 0 15px rgba(0, 229, 255, 0.45);
+        }
+
+        .efficiency-bar-container {
+            grid-column: span 2;
+            margin-top: 5px;
+        }
+
+        .efficiency-bar-label-row {
+            display: flex;
+            justify-content: space-between;
             font-size: 0.8rem;
-            color: var(--dim-green);
+            margin-bottom: 8px;
+            color: var(--text-silver);
+            text-transform: uppercase;
+        }
+
+        .efficiency-bar-outer {
+            height: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+
+        .efficiency-bar-inner {
+            height: 100%;
+            background: linear-gradient(90deg, var(--dim-green) 0%, var(--primary-green) 100%);
+            border-radius: 50px;
+            box-shadow: 0 0 12px var(--primary-green);
+            width: 0%;
+            transition: width 1.5s cubic-bezier(0.1, 0.8, 0.2, 1);
+        }
+
+        /* SVG CHART WIDGETS */
+        .chart-box {
+            height: 160px;
+            width: 100%;
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            background: rgba(3, 7, 18, 0.9);
+            border: 1px solid var(--primary-green);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: #ffffff;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 10;
+        }
+
+        /* COLLAPSIBLE LIVE EXECUTION LOGS DRAWER */
+        .logs-drawer {
+            position: fixed;
+            bottom: -350px;
+            left: 80px;
+            right: 0;
+            height: 400px;
+            background: rgba(3, 7, 18, 0.93);
+            backdrop-filter: blur(25px);
+            border-top: 1.5px solid var(--border-glow);
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 255, 65, 0.05);
+            z-index: 100;
+            transition: bottom 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            display: flex;
+            flex-direction: column;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .logs-drawer.open {
+            bottom: 0;
+        }
+
+        .drawer-header {
+            background: rgba(16, 24, 48, 0.5);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .drawer-title {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--primary-green);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+        }
+
+        .drawer-indicator {
+            width: 8px;
+            height: 8px;
+            background: var(--primary-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--primary-green);
+        }
+
+        .drawer-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            font-family: var(--font-ui);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .drawer-btn:hover {
+            border-color: var(--primary-green);
+            color: var(--primary-green);
+            background: rgba(0, 255, 65, 0.05);
+        }
+
+        .drawer-content {
+            padding: 20px;
+            overflow-y: auto;
+            flex-grow: 1;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: rgba(2, 4, 8, 0.5);
+        }
+
+        .console-log-entry {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-left: 3px solid var(--dim-green);
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .console-log-entry:hover {
+            background: rgba(255, 255, 255, 0.02);
+            border-color: rgba(0, 255, 65, 0.2);
+            border-left-color: var(--primary-green);
+        }
+
+        .console-log-entry.failed {
+            border-left-color: var(--error-red);
+        }
+
+        .log-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+
+        .log-time { color: var(--text-silver); }
+        .log-task { color: var(--secondary-cyan); font-weight: 600; }
+        
+        .log-tag {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .log-tag-success { background: rgba(0, 255, 65, 0.15); color: var(--primary-green); border: 1px solid rgba(0, 255, 65, 0.25); }
+        .log-tag-fail { background: rgba(255, 51, 68, 0.15); color: var(--error-red); border: 1px solid rgba(255, 51, 68, 0.25); }
+
+        .log-target {
+            color: var(--text-silver);
+            font-size: 0.75rem;
+        }
+
+        .log-output-box {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px;
+            border-radius: 4px;
+            color: #d1d5db;
+            font-size: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Toggle Drawer Tab on screen bottom */
+        .drawer-trigger {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(8, 16, 32, 0.95);
+            border: 1px solid var(--border-glow);
+            border-bottom: none;
+            padding: 8px 24px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--primary-green);
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            z-index: 99;
+            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .drawer-trigger:hover {
+            background: rgba(0, 255, 65, 0.05);
+            box-shadow: 0 -5px 25px rgba(0, 255, 65, 0.2);
+            color: #ffffff;
+        }
+
+        /* Dropdown custom style styling */
+        select option {
+            background-color: #0c1527;
+            color: var(--text-light);
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div>SYSTEM STATUS: <span id="pulse" style="color: var(--primary-green)">● RUNNING</span></div>
-        <div id="clock"></div>
+    <!-- Falling Matrix Canvas Background -->
+    <canvas id="binary-canvas"></canvas>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">X</div>
+            
+            <nav class="sidebar-menu">
+                <div class="menu-item active" title="UEAAS Center">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                </div>
+                <div class="menu-item" title="Data Analytics">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                </div>
+                <div class="menu-item" title="Logs Explorer" onclick="toggleLogsDrawer()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                </div>
+                <div class="menu-item" title="Configuration">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H20a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.5 1z"></path></svg>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="menu-item" title="Settings">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Workspace Viewport -->
+        <main class="workspace">
+            
+            <!-- Top Header Navbar -->
+            <header class="header">
+                <div class="header-title-container">
+                    <span class="header-subtitle">System Status: active</span>
+                    <h1 class="header-title">UEAAS DASHBOARD</h1>
+                </div>
+                
+                <div class="header-controls">
+                    <select class="dropdown-select" id="select-active-workflow">
+                        <option value="automaximization">Automonxiontote v</option>
+                        <option value="data-sync">Data Synchronization</option>
+                        <option value="excel-watcher">Excel Watcher Daemon</option>
+                        <option value="db-cleanup">DB Cleanup Cron</option>
+                    </select>
+                    
+                    <div class="system-time" id="realtime-clock">12:00:00 PM</div>
+                </div>
+            </header>
+
+            <!-- Dashboard Visual Grid -->
+            <div class="dashboard-grid">
+                
+                <!-- HERO ORBIT HOVER ELEMENT -->
+                <section class="glass-panel hero-panel">
+                    <div class="hero-left">
+                        <div class="hero-system-status">
+                            <span class="hero-status-dot"></span>
+                            Excel Core: Connected & Autonomous
+                        </div>
+                        <h2 class="hero-title">
+                            Ultimate Excel-Based<br>
+                            Autonomous Automation System
+                        </h2>
+                        <p class="hero-desc">
+                            Powering enterprise workflows. Revolutionize data operations with smart, autonomous Excel-driven execution pipelines and high-speed multi-threaded script triggers.
+                        </p>
+                        <button class="hero-btn" onclick="toggleLogsDrawer()">
+                            Get Started
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="hero-right">
+                        <!-- Holographic 3D Rings & Excel Logo -->
+                        <div class="hologram-stage">
+                            <div class="hologram-grid-floor"></div>
+                            
+                            <!-- Concentric rotating dashed orbits -->
+                            <div class="orbit-ring orbit-ring-1">
+                                <div class="orbit-particle"></div>
+                            </div>
+                            
+                            <div class="orbit-ring orbit-ring-2">
+                                <div class="orbit-particle orbit-particle-cyan"></div>
+                            </div>
+                            
+                            <div class="orbit-ring orbit-ring-3"></div>
+                            
+                            <!-- Central logo -->
+                            <div class="excel-hologram-logo"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- LEFT CARD: CODES/SCRIPTS tab -->
+                <section class="glass-panel scripts-panel">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" id="tab-scripts" onclick="selectTab('scripts')">Scripts</button>
+                        <button class="tab-btn" id="tab-configs" onclick="selectTab('configs')">Configs</button>
+                    </div>
+                    
+                    <div class="code-editor-container">
+                        <!-- Line Numbers -->
+                        <div class="code-gutter" id="code-gutter">
+                            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span>
+                        </div>
+                        <!-- Python Script Code -->
+                        <div class="code-lines" id="code-lines-content">
+<span class="code-keyword">def</span> <span class="code-func">autonomous_automation</span>(sheet_data, config):
+    <span class="code-comment"># Query Excel rows and execute tasks</span>
+    tasks = sheet_data.<span class="code-func">get_rows</span>()
+    <span class="code-keyword">for</span> task <span class="code-keyword">in</span> tasks:
+        <span class="code-keyword">if</span> task[<span class="code-string">'status'</span>] == <span class="code-string">'Pending'</span>:
+            <span class="code-comment"># Trigger autonomous processing</span>
+            log_id = <span class="code-func">execute_script</span>(task[<span class="code-string">'action'</span>])
+            <span class="code-keyword">if</span> log_id:
+                sheet_data.<span class="code-func">set_status</span>(task[<span class="code-string">'id'</span>], <span class="code-string">'Completed'</span>)
+            <span class="code-keyword">else</span>:
+                sheet_data.<span class="code-func">set_status</span>(task[<span class="code-string">'id'</span>], <span class="code-string">'Failed'</span>)
+                
+    <span class="code-keyword">return</span> <span class="code-string">"Task Execution Completed Successfully."</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- RIGHT GRID OF METRICS & SVG CHARTS -->
+                <div class="metrics-subgrid">
+                    
+                    <!-- Metrics numerical summary card -->
+                    <section class="glass-panel">
+                        <div class="card-header-row">
+                            <h3 class="card-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                                Metrics
+                            </h3>
+                            <span class="card-dots">...</span>
+                        </div>
+                        
+                        <div class="metrics-card-content">
+                            <div class="metric-stat-box">
+                                <div class="metric-stat-label">Automated Tasks</div>
+                                <div class="metric-stat-val" id="total-tasks-val">{{ "{:,}".format(total) }}</div>
+                            </div>
+                            
+                            <div class="metric-stat-box metric-stat-box-cyan">
+                                <div class="metric-stat-label">Active Scripts</div>
+                                <div class="metric-stat-val" id="active-scripts-val">{{ active_scripts }}</div>
+                            </div>
+                            
+                            <div class="efficiency-bar-container">
+                                <div class="efficiency-bar-label-row">
+                                    <span>Efficiency Rate</span>
+                                    <span id="efficiency-percent">{{ efficiency }}%</span>
+                                </div>
+                                <div class="efficiency-bar-outer">
+                                    <div class="efficiency-bar-inner" id="efficiency-bar" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Chart 1: DATA ANALYSE Bar Chart -->
+                    <section class="glass-panel">
+                        <div class="card-header-row">
+                            <h3 class="card-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                                Data Analyse
+                            </h3>
+                            <span class="dropdown-select" style="font-size: 0.75rem; padding: 4px 10px;">Execution v</span>
+                        </div>
+                        <div class="chart-box" id="data-analyse-chart-container">
+                            <!-- SVG Bar Chart -->
+                            <svg width="100%" height="100%" viewBox="0 0 400 130" preserveAspectRatio="none" id="analyse-svg">
+                                <defs>
+                                    <linearGradient id="barGrad" x1="0" y1="1" x2="0" y2="0">
+                                        <stop offset="0%" stop-color="#008f11" stop-opacity="0.2"/>
+                                        <stop offset="100%" stop-color="#00ff41" stop-opacity="0.95"/>
+                                    </linearGradient>
+                                </defs>
+                                <!-- Bar charts drawn via Javascript -->
+                            </svg>
+                            <div class="chart-tooltip" id="analyse-tooltip"></div>
+                        </div>
+                    </section>
+
+                    <!-- Grid Row: Data USD & Data 56TS -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+                        
+                        <!-- Chart 2: DATA USD -->
+                        <section class="glass-panel" style="padding: 18px;">
+                            <div class="card-header-row" style="margin-bottom: 10px;">
+                                <h3 class="card-title" style="font-size: 0.9rem;">Data USD</h3>
+                                <span class="card-dots">...</span>
+                            </div>
+                            <div class="chart-box" style="height: 110px;" id="data-usd-chart-container">
+                                <svg width="100%" height="100%" viewBox="0 0 200 100" preserveAspectRatio="none" id="usd-svg">
+                                    <!-- Dynamic elements filled in by JS -->
+                                </svg>
+                                <div class="chart-tooltip" id="usd-tooltip"></div>
+                            </div>
+                        </section>
+
+                        <!-- Chart 3: DATA 56TS Glowing Line -->
+                        <section class="glass-panel" style="padding: 18px;">
+                            <div class="card-header-row" style="margin-bottom: 10px;">
+                                <h3 class="card-title" style="font-size: 0.9rem;">Data 56TS</h3>
+                                <span class="card-dots">...</span>
+                            </div>
+                            <div class="chart-box" style="height: 110px;" id="data-56ts-chart-container">
+                                <svg width="100%" height="100%" viewBox="0 0 200 100" preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stop-color="#00ff41" stop-opacity="0.3"/>
+                                            <stop offset="100%" stop-color="#00ff41" stop-opacity="0"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <path id="sine-glow-path" d="" fill="url(#lineGrad)" stroke="none"></path>
+                                    <path id="sine-path" d="" fill="none" stroke="#00ff41" stroke-width="2.5" filter="drop-shadow(0 0 5px rgba(0,255,65,0.8))"></path>
+                                </svg>
+                            </div>
+                        </section>
+                        
+                    </div>
+
+                </div>
+
+            </div>
+        </main>
     </div>
 
-    <div class="terminal-window">
-        <div class="terminal-header">
-            VAIBHAV-AUTOMATION-CORE v2.5
-        </div>
-        <div class="terminal-content" id="terminal-body">
-            <div class="command-line">
-                <span class="prompt">root@automation:~#</span>
-                <span class="command-text typewriter" id="main-cmd">python process_excel_tasks.py --live</span>
+    <!-- Trigger tab for execution drawer console -->
+    <div class="drawer-trigger" onclick="toggleLogsDrawer()">
+        <span class="hero-status-dot"></span>
+        <span>Live Execution Log Console ({{ db_total }} SQLite logs)</span>
+        <span id="trigger-arrow" style="transition: transform 0.3s;">▲</span>
+    </div>
+
+    <!-- Sliding Logs Drawer Console -->
+    <div class="logs-drawer" id="logs-drawer-console">
+        <div class="drawer-header" onclick="toggleLogsDrawer()">
+            <div class="drawer-title">
+                <span class="drawer-indicator"></span>
+                <span>Active Automation Core (FastAPI SQLite Pipeline)</span>
             </div>
-            
-            <div id="loading" class="loading-bar"></div>
-            
-            <div id="logs-container">
-                {% for log in logs %}
-                <div class="log-entry" style="animation-delay: {{ loop.index0 * 0.2 }}s">
-                    <div>
-                        <span style="color: var(--text-gray)">[{{ log.end_time }}]</span>
-                        <span style="color: #00d4ff">[{{ log.task_id }}]</span>
-                        <span class="status-tag {% if log.status == 'SUCCESS' %}success-tag{% else %}fail-tag{% endif %}">
-                            {{ log.status }}
-                        </span>
-                    </div>
-                    <div style="font-size: 0.8rem; margin: 5px 0;">EXECUTION_TARGET: {{ log.machine_name }}</div>
-                    <div class="output">{{ log.stdout }}</div>
-                </div>
-                {% endfor %}
+            <div>
+                <button class="drawer-btn" onclick="event.stopPropagation(); window.location.reload();">Force Reload</button>
+                <button class="drawer-btn" style="margin-left: 8px;" onclick="event.stopPropagation(); toggleLogsDrawer();">Close</button>
             </div>
         </div>
         
-        <div class="stats-overlay">
-            TOTAL_TASKS: {{ total }}<br>
-            SUCCESS_RATE: {{ (success / total * 100)|round(1) if total > 0 else 0 }}%
+        <div class="drawer-content" id="logs-drawer-content">
+            {% if logs %}
+                {% for log in logs %}
+                <div class="console-log-entry {% if log.status != 'SUCCESS' %}failed{% endif %}">
+                    <div class="log-meta-row">
+                        <span class="log-time">Timestamp: [{{ log.end_time }}]</span>
+                        <span class="log-task">Task ID: {{ log.task_id }} ({% if log.task_name %}{{ log.task_name }}{% else %}Core Worker{% endif %})</span>
+                        <span class="log-tag {% if log.status == 'SUCCESS' %}log-tag-success{% else %}log-tag-fail{% endif %}">
+                            {{ log.status }}
+                        </span>
+                    </div>
+                    <div class="log-target">Execution Environment Host: {{ log.machine_name }} | Run Time: {{ log.duration }}s</div>
+                    {% if log.stdout %}
+                    <div class="log-output-box">{{ log.stdout }}</div>
+                    {% endif %}
+                    {% if log.stderr %}
+                    <div class="log-output-box" style="border-left: 2px solid var(--error-red); color: var(--error-red); background: rgba(255, 51, 68, 0.03);">{{ log.stderr }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="console-log-entry" style="text-align: center; color: var(--text-silver); padding: 40px;">
+                    <span>● No SQLite logs captured yet. System standing by. Run python scripts in your workspace to trigger logs.</span>
+                </div>
+            {% endif %}
         </div>
     </div>
 
     <script>
-        // Set loading bar
-        setTimeout(() => { document.getElementById('loading').style.width = '100%'; }, 500);
+        // Matrix Rain Canvas Simulation
+        const canvas = document.getElementById('binary-canvas');
+        const ctx = canvas.getContext('2d');
 
-        // Update clock
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const binaryChars = '01'.split('');
+        const fontSize = 14;
+        let columns = canvas.width / fontSize;
+        let rainDrops = [];
+
+        for (let x = 0; x < columns; x++) {
+            rainDrops[x] = Math.random() * -100; // staggered offset
+        }
+
+        // recalculate columns on resize
+        window.addEventListener('resize', () => {
+            columns = canvas.width / fontSize;
+            rainDrops = [];
+            for (let x = 0; x < columns; x++) {
+                rainDrops[x] = Math.random() * -100;
+            }
+        });
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(3, 6, 15, 0.12)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00ff41';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < rainDrops.length; i++) {
+                const text = binaryChars[Math.floor(Math.random() * binaryChars.length)];
+                ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+                if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    rainDrops[i] = 0;
+                }
+                rainDrops[i] += 0.85; // fall speed
+            }
+        }
+        setInterval(drawMatrix, 33); // roughly 30 FPS for low power/CPU draw
+
+        // Clock Widget
         function updateClock() {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+            const clockEl = document.getElementById('realtime-clock');
+            const now = new Date();
+            clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Auto refresh
-        setTimeout(() => { window.location.reload(); }, 15000);
+        // Tabs scripts/configs controller
+        const scriptCode = `<span class="code-keyword">def</span> <span class="code-func">autonomous_automation</span>(sheet_data, config):
+    <span class="code-comment"># Query Excel rows and execute tasks</span>
+    tasks = sheet_data.<span class="code-func">get_rows</span>()
+    <span class="code-keyword">for</span> task <span class="code-keyword">in</span> tasks:
+        <span class="code-keyword">if</span> task[<span class="code-string">'status'</span>] == <span class="code-string">'Pending'</span>:
+            <span class="code-comment"># Trigger autonomous processing</span>
+            log_id = <span class="code-func">execute_script</span>(task[<span class="code-string">'action'</span>])
+            <span class="code-keyword">if</span> log_id:
+                sheet_data.<span class="code-func">set_status</span>(task[<span class="code-string">'id'</span>], <span class="code-string">'Completed'</span>)
+            <span class="code-keyword">else</span>:
+                sheet_data.<span class="code-func">set_status</span>(task[<span class="code-string">'id'</span>], <span class="code-string">'Failed'</span>)
+                
+    <span class="code-keyword">return</span> <span class="code-string">"Task Execution Completed Successfully."</span>`;
+
+        const configCode = `<span class="code-keyword">import</span> os
+
+<span class="code-comment"># System Configuration settings for UEAAS</span>
+AUTOMATION_SYSTEM_CONFIG = {
+    <span class="code-string">"excel_db_file"</span>: <span class="code-string">"data/tasks.xlsx"</span>,
+    <span class="code-string">"sqlite_logs"</span>: <span class="code-string">"data/database.sqlite"</span>,
+    <span class="code-string">"max_worker_threads"</span>: <span class="code-num">8</span>,
+    <span class="code-string">"live_logs_enabled"</span>: <span class="code-keyword">True</span>,
+    <span class="code-string">"smtp_alert_notification"</span>: <span class="code-keyword">True</span>,
+    <span class="code-string">"heartbeat_interval_sec"</span>: <span class="code-num">5</span>,
+    <span class="code-string">"dashboard_port"</span>: <span class="code-num">8000</span>,
+    <span class="code-string">"environment"</span>: <span class="code-string">"production"</span>
+}`;
+
+        function selectTab(tab) {
+            const tabScripts = document.getElementById('tab-scripts');
+            const tabConfigs = document.getElementById('tab-configs');
+            const codeContainer = document.getElementById('code-lines-content');
+            const gutter = document.getElementById('code-gutter');
+
+            if (tab === 'scripts') {
+                tabScripts.classList.add('active');
+                tabConfigs.classList.remove('active');
+                codeContainer.innerHTML = scriptCode;
+                gutter.innerHTML = '<span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span>';
+            } else {
+                tabScripts.classList.remove('active');
+                tabConfigs.classList.add('active');
+                codeContainer.innerHTML = configCode;
+                gutter.innerHTML = '<span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>';
+            }
+        }
+
+        // Logs Drawer collapse/expand
+        function toggleLogsDrawer() {
+            const drawer = document.getElementById('logs-drawer-console');
+            const arrow = document.getElementById('trigger-arrow');
+            drawer.classList.toggle('open');
+            if (drawer.classList.contains('open')) {
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Animate metrics on entry
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const efficiencyVal = parseFloat("{{ efficiency }}") || 98.0;
+                document.getElementById('efficiency-bar').style.width = efficiencyVal + '%';
+            }, 300);
+            
+            // Build Dynamic Charts
+            buildAnalyseChart();
+            buildUsdChart();
+            buildSineWaveChart();
+        });
+
+        // DRAW SVG DATA ANALYSE CHART
+        function buildAnalyseChart() {
+            const svg = document.getElementById('analyse-svg');
+            const tooltip = document.getElementById('analyse-tooltip');
+            
+            // Weekly simulation metrics loaded from SQLite runs or mock if empty
+            // We use high-density, gorgeous design values
+            const data = [
+                { label: 'Mon', value: 45 },
+                { label: 'Tue', value: 85 },
+                { label: 'Wed', value: 65 },
+                { label: 'Thu', value: 110 },
+                { label: 'Fri', value: 95 },
+                { label: 'Sat', value: 35 },
+                { label: 'Sun', value: 55 }
+            ];
+
+            const barWidth = 32;
+            const gap = 18;
+            const startX = 30;
+            const startY = 110;
+            const maxVal = 120;
+            const scaleY = 85 / maxVal;
+
+            data.forEach((d, i) => {
+                const x = startX + i * (barWidth + gap);
+                const height = d.value * scaleY;
+                const y = startY - height;
+
+                // Create SVG rect element
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', x);
+                rect.setAttribute('y', startY); // animate from baseline
+                rect.setAttribute('width', barWidth);
+                rect.setAttribute('height', 0);
+                rect.setAttribute('rx', 4);
+                rect.setAttribute('fill', 'url(#barGrad)');
+                rect.setAttribute('filter', 'drop-shadow(0 0 2px rgba(0, 255, 65, 0.4))');
+                rect.style.transition = 'height 1s cubic-bezier(0.175, 0.885, 0.32, 1.1), y 1s cubic-bezier(0.175, 0.885, 0.32, 1.1)';
+                rect.style.cursor = 'pointer';
+
+                // hover interactive tooltip
+                rect.addEventListener('mouseover', (e) => {
+                    rect.setAttribute('stroke', '#ffffff');
+                    rect.setAttribute('stroke-width', '1.5');
+                    tooltip.style.opacity = 1;
+                    tooltip.innerHTML = `Runs: <strong>${d.value}</strong>`;
+                    
+                    const rectBounds = e.target.getBoundingClientRect();
+                    const containerBounds = document.getElementById('data-analyse-chart-container').getBoundingClientRect();
+                    tooltip.style.left = (rectBounds.left - containerBounds.left + 5) + 'px';
+                    tooltip.style.top = (rectBounds.top - containerBounds.top - 32) + 'px';
+                });
+
+                rect.addEventListener('mouseout', () => {
+                    rect.setAttribute('stroke', 'none');
+                    tooltip.style.opacity = 0;
+                });
+
+                svg.appendChild(rect);
+
+                // Create text elements for labels
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x + barWidth / 2);
+                text.setAttribute('y', startY + 16);
+                text.setAttribute('fill', '#a0aec0');
+                text.setAttribute('font-size', '9');
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('font-family', 'sans-serif');
+                text.textContent = d.label;
+                svg.appendChild(text);
+
+                // Animate entry
+                setTimeout(() => {
+                    rect.setAttribute('y', y);
+                    rect.setAttribute('height', height);
+                }, 100 + i * 80);
+            });
+        }
+
+        // DRAW SVG USD FINANCIAL SAVED CHART
+        function buildUsdChart() {
+            const svg = document.getElementById('usd-svg');
+            const tooltip = document.getElementById('usd-tooltip');
+            
+            const data = [
+                { label: 'Jan', value: 12 },
+                { label: 'Feb', value: 24 },
+                { label: 'Mar', value: 18 },
+                { label: 'Apr', value: 36 },
+                { label: 'May', value: 29 },
+                { label: 'Jun', value: 48 }
+            ];
+
+            const barWidth = 16;
+            const gap = 12;
+            const startX = 20;
+            const startY = 85;
+            const maxVal = 60;
+            const scaleY = 65 / maxVal;
+
+            data.forEach((d, i) => {
+                const x = startX + i * (barWidth + gap);
+                const height = d.value * scaleY;
+                const y = startY - height;
+
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', x);
+                rect.setAttribute('y', startY);
+                rect.setAttribute('width', barWidth);
+                rect.setAttribute('height', 0);
+                rect.setAttribute('rx', 2);
+                rect.setAttribute('fill', '#00e5ff');
+                rect.style.transition = 'height 0.8s cubic-bezier(0.1, 0.8, 0.2, 1), y 0.8s cubic-bezier(0.1, 0.8, 0.2, 1)';
+                rect.style.cursor = 'pointer';
+
+                rect.addEventListener('mouseover', (e) => {
+                    rect.setAttribute('stroke', '#ffffff');
+                    rect.setAttribute('stroke-width', '1');
+                    tooltip.style.opacity = 1;
+                    tooltip.innerHTML = `Value: <strong>$${d.value}K</strong>`;
+                    
+                    const rectBounds = e.target.getBoundingClientRect();
+                    const containerBounds = document.getElementById('data-usd-chart-container').getBoundingClientRect();
+                    tooltip.style.left = (rectBounds.left - containerBounds.left - 5) + 'px';
+                    tooltip.style.top = (rectBounds.top - containerBounds.top - 28) + 'px';
+                });
+
+                rect.addEventListener('mouseout', () => {
+                    rect.setAttribute('stroke', 'none');
+                    tooltip.style.opacity = 0;
+                });
+
+                svg.appendChild(rect);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x + barWidth / 2);
+                text.setAttribute('y', startY + 12);
+                text.setAttribute('fill', '#a0aec0');
+                text.setAttribute('font-size', '8');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = d.label;
+                svg.appendChild(text);
+
+                setTimeout(() => {
+                    rect.setAttribute('y', y);
+                    rect.setAttribute('height', height);
+                }, 150 + i * 50);
+            });
+        }
+
+        // ANIMATED SINE-WAVE Live indicator
+        function buildSineWaveChart() {
+            const sinePath = document.getElementById('sine-path');
+            const glowPath = document.getElementById('sine-glow-path');
+            
+            const pointsCount = 40;
+            const width = 200;
+            const height = 100;
+            const centerY = 50;
+            const amplitude = 22;
+            let offset = 0;
+
+            function generateWavePoints() {
+                let d = [];
+                for (let i = 0; i <= pointsCount; i++) {
+                    const x = (i / pointsCount) * width;
+                    // combine two sine waves at different frequencies for rich wave form
+                    const angle = (i / pointsCount) * Math.PI * 4.5 + offset;
+                    const y = centerY + Math.sin(angle) * amplitude + Math.cos(angle * 1.8) * 8;
+                    d.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`);
+                }
+                return d.join(' ');
+            }
+
+            function animateWave() {
+                offset += 0.06;
+                const pathStr = generateWavePoints();
+                sinePath.setAttribute('d', pathStr);
+                
+                // For glowing shadow polygon under path
+                const fillPath = pathStr + ` L ${width} ${height} L 0 ${height} Z`;
+                glowPath.setAttribute('d', fillPath);
+                
+                requestAnimationFrame(animateWave);
+            }
+            animateWave();
+        }
+
+        // Auto Refresh dashboard every 15 seconds to fetch new SQLite execution logs!
+        setTimeout(() => {
+            if (!document.getElementById('logs-drawer-console').classList.contains('open')) {
+                window.location.reload();
+            }
+        }, 15000);
     </script>
 </body>
 </html>
